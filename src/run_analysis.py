@@ -13,6 +13,7 @@ def run_sql_analysis():
     conn = sqlite3.connect(DB_PATH)
     
     queries = {
+        # TODO: 可以加上同比环比、留存率、RFM等分析维度
         'monthly_sales': "SELECT month, SUM(total_amount) as revenue, SUM(quantity) as qty FROM fact_sales GROUP BY month ORDER BY month",
         'category_sales': "SELECT category, SUM(total_amount) as revenue, SUM(quantity) as qty, COUNT(DISTINCT order_id) as orders FROM fact_sales GROUP BY category ORDER BY revenue DESC",
         'region_sales': "SELECT region, SUM(total_amount) as revenue, SUM(quantity) as qty FROM fact_sales GROUP BY region ORDER BY revenue DESC",

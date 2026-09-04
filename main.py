@@ -11,6 +11,7 @@ from src.build_dashboard import build_dashboard
 
 def main():
     print("=== 销售数据可视化看板 ===")
+    # TODO: 支持命令行参数指定年份和数据量，现在只能改代码
     
     print("[1/4] 生成模拟销售数据...")
     generate_sales_data()

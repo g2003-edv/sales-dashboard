@@ -15,6 +15,7 @@ def build_database():
     
     conn = sqlite3.connect(DB_PATH)
     
+    # TODO: 维度表应该加索引，数据量大的时候JOIN会很慢
     conn.execute("CREATE TABLE dim_product (product_id TEXT PRIMARY KEY, product_name TEXT, category TEXT)")
     conn.execute("CREATE TABLE dim_region (region TEXT, city TEXT, PRIMARY KEY(region, city))")
     conn.execute("CREATE TABLE dim_date (date TEXT PRIMARY KEY, month TEXT, quarter TEXT)")

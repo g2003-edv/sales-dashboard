@@ -53,6 +53,7 @@ def build_dashboard():
         'values': [round(x, 2) for x in daily['revenue'].tolist()],
     }
     
+    # FIXME: CSS样式全硬编码在Python字符串里，改个颜色要改代码，应该抽成模板文件
     html_content = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>

@@ -8,7 +8,7 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 
 
 def generate_sales_data():
-    np.random.seed(42)
+    np.random.seed(42)  # FIXME: 固定种子导致每次生成的数据都一样，应该用当前日期做种子或支持参数传入
     
     products = [
         {'id': 'P001', 'name': '智能手机', 'category': '数码', 'price': 3999},

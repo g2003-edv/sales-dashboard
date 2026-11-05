@@ -7,6 +7,27 @@ SQL_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'sql')
 DASHBOARD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'dashboard')
 
 
+def _mom_pct(series):
+    """环比：最后一期相对上一期的百分比变化；期数不足或上期为 0 时返回 None"""
+    if series is None:
+        return None
+    values = pd.to_numeric(pd.Series(series), errors='coerce').reset_index(drop=True)
+    if len(values) < 2:
+        return None
+    prev, cur = values.iloc[-2], values.iloc[-1]
+    if pd.isna(prev) or pd.isna(cur) or prev == 0:
+        return None
+    return (float(cur) - float(prev)) / float(prev) * 100
+
+
+def _mom_html(pct):
+    """指标卡副标题：算不出来就显示 —，不编造数字"""
+    if pct is None:
+        return '<div class="metric-change muted">环比 —</div>'
+    css_class = 'up' if pct >= 0 else 'down'
+    return f'<div class="metric-change {css_class}">环比 {pct:+.1f}%</div>'
+
+
 def build_dashboard():
     os.makedirs(DASHBOARD_DIR, exist_ok=True)
     
@@ -17,10 +38,30 @@ def build_dashboard():
     daily = pd.read_csv(os.path.join(SQL_DIR, 'daily_trend.csv'), encoding='utf-8-sig')
     city = pd.read_csv(os.path.join(SQL_DIR, 'city_performance.csv'), encoding='utf-8-sig')
     
-    total_revenue = monthly['revenue'].sum()
-    total_orders = category['orders'].sum()
-    total_qty = category['qty'].sum()
+    monthly = monthly.sort_values('month').reset_index(drop=True)
+    monthly_revenue = pd.to_numeric(monthly['revenue'], errors='coerce')
+    monthly_qty = pd.to_numeric(monthly['qty'], errors='coerce')
+    monthly_orders = (
+        pd.to_numeric(monthly['orders'], errors='coerce')
+        if 'orders' in monthly.columns else None
+    )
+
+    total_revenue = monthly_revenue.sum()
+    total_orders = (
+        monthly_orders.sum() if monthly_orders is not None
+        else pd.to_numeric(category['orders'], errors='coerce').sum()
+    )
+    total_qty = monthly_qty.sum()
     avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
+
+    revenue_mom = _mom_pct(monthly_revenue)
+    orders_mom = _mom_pct(monthly_orders)
+    qty_mom = _mom_pct(monthly_qty)
+    if monthly_orders is not None:
+        monthly_aov = monthly_revenue / monthly_orders.where(monthly_orders != 0)
+        aov_mom = _mom_pct(monthly_aov)
+    else:
+        aov_mom = None
     
     monthly_data = {
         'months': monthly['month'].tolist(),
@@ -98,9 +139,11 @@ def build_dashboard():
         .metric-label {{ color: #666; font-size: 14px; }}
         .metric-change {{
             font-size: 12px;
-            color: #52c41a;
             margin-top: 4px;
         }}
+        .metric-change.up {{ color: #52c41a; }}
+        .metric-change.down {{ color: #cf1322; }}
+        .metric-change.muted {{ color: #999; }}
         
         .charts-grid {{
             display: grid;
@@ -141,22 +184,22 @@ def build_dashboard():
         <div class="metric-card">
             <div class="metric-value">¥{total_revenue:,.0f}</div>
             <div class="metric-label">总销售额</div>
-            <div class="metric-change">同比 +23.5%</div>
+            {_mom_html(revenue_mom)}
         </div>
         <div class="metric-card">
             <div class="metric-value">{total_orders:,}</div>
             <div class="metric-label">总订单数</div>
-            <div class="metric-change">同比 +18.2%</div>
+            {_mom_html(orders_mom)}
         </div>
         <div class="metric-card">
             <div class="metric-value">{total_qty:,}</div>
             <div class="metric-label">总销量（件）</div>
-            <div class="metric-change">同比 +15.8%</div>
+            {_mom_html(qty_mom)}
         </div>
         <div class="metric-card">
             <div class="metric-value">¥{avg_order_value:.0f}</div>
             <div class="metric-label">客单价</div>
-            <div class="metric-change">同比 +4.5%</div>
+            {_mom_html(aov_mom)}
         </div>
     </div>
     
@@ -290,3 +333,7 @@ def build_dashboard():
         f.write(html_content)
     
     print(f"  看板已生成: dashboard/index.html")
+
+
+if __name__ == '__main__':
+    build_dashboard()

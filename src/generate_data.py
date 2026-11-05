@@ -5,6 +5,16 @@ import numpy as np
 from datetime import datetime, timedelta
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+ORDER_COUNT = 5000
+
+
+def seasonal_factor(month):
+    """大促月（618/双11）订单更多，春节月订单更少"""
+    if month in (6, 11):
+        return 2.5
+    if month in (1, 2):
+        return 0.6
+    return 1.0
 
 
 def generate_sales_data():
@@ -34,21 +44,21 @@ def generate_sales_data():
     
     orders = []
     start_date = datetime(2024, 1, 1)
-    
-    for i in range(5000):
-        date = start_date + timedelta(days=np.random.randint(0, 365))
+    days = [start_date + timedelta(days=i) for i in range(365)]
+
+    # 季节因子作用在订单笔数上：按月的权重抽样日期，大促月生成更多订单
+    day_weights = np.array([seasonal_factor(d.month) for d in days], dtype=float)
+    day_weights /= day_weights.sum()
+    day_indices = np.random.choice(len(days), size=ORDER_COUNT, p=day_weights)
+
+    for i in range(ORDER_COUNT):
+        date = days[int(day_indices[i])]
         product = np.random.choice(products)
         region = np.random.choice(regions)
         city = np.random.choice(cities[region])
-        
-        month = date.month
-        seasonal_factor = 1.0
-        if month in [6, 11]:
-            seasonal_factor = 2.5
-        elif month in [1, 2]:
-            seasonal_factor = 0.6
-        
-        quantity = max(1, int(np.random.poisson(2) * seasonal_factor))
+
+        # 季节性已体现在订单笔数上，单笔购买量保持稳定（否则会被平方放大）
+        quantity = max(1, int(np.random.poisson(2)))
         unit_price = product['price'] * np.random.uniform(0.8, 1.0)
         total_amount = round(quantity * unit_price, 2)
         
@@ -71,3 +81,7 @@ def generate_sales_data():
     os.makedirs(DATA_DIR, exist_ok=True)
     df.to_csv(os.path.join(DATA_DIR, 'sales_raw.csv'), index=False, encoding='utf-8-sig')
     print(f"  生成 {len(df)} 条销售记录: data/sales_raw.csv")
+
+
+if __name__ == '__main__':
+    generate_sales_data()

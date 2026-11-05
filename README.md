@@ -59,16 +59,26 @@ dim_date (维度表)
 - **SQL窗口函数**：写月度环比增长率的时候，LAG()函数一开始用不熟练，分区条件写错了，结果算出来是全局的LAG而不是按品类分区的。查了半天文档才调对。
 - **ECharts双轴对齐**：月度趋势图想同时显示销售额（柱状）和销量（折线），两个Y轴的刻度范围没对齐，视觉上对比不明显。后来加了max/min的百分比计算才解决。
 - **中文标签截断**：TOP10商品名称太长，ECharts的横向条形图标签被截断。加了formatter回调函数做换行处理。
-- **静态HTML体积**：所有图表数据直接内嵌在HTML里，文件有800多KB。如果数据量再大可能要考虑分文件加载，目前5000条还行。
+- **静态HTML体积**：所有图表数据直接内嵌在HTML里，当前文件约18KB（随数据量变化）。如果数据量再大可能要考虑分文件加载，目前5000条还行。
 
 ## 快速开始
 
 ```bash
 pip install -r requirements.txt
+
+# 方式一：一键运行（内部顺序固定，不可调换）
 python main.py
+
+# 方式二：分步运行，每一步的产物就是下一步的输入
+python src/generate_data.py     # data/sales_raw.csv
+python src/build_database.py    # data/sales.db
+python src/run_analysis.py      # sql/*.csv
+python src/build_dashboard.py   # dashboard/index.html
 ```
 
 然后在浏览器中打开 `dashboard/index.html`。
+
+看板依赖 jsdelivr CDN 加载 ECharts（`echarts@5.4.3`），离线环境需自托管 `echarts.min.js` 并修改 `src/build_dashboard.py` 中的 script 地址。
 
 ## 看板包含的图表
 
